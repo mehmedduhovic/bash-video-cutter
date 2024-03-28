@@ -65,7 +65,7 @@ start_script() {
         mkdir $directory
     fi
 
-    if [[ ! -e "input_video" ]]; then
+    if [[ ! -e "$input_video" ]]; then
         echo -e "\033[31mERROR: Input video is missing! \033[0m"
         ((error_count++))
     fi
