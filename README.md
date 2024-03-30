@@ -63,4 +63,4 @@ Before using this script, ensure you have the following prerequisites installed:
 
 - Ability to enter your own format and extension of video shorts
 - Ability to change the exported names
-- Color-code the error messages
+- Progress bar (hide ffmpeg report)

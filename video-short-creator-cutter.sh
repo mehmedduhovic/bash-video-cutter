@@ -90,10 +90,16 @@ start_script() {
             -c:v copy              #codec video copy
             -c:a copy              #codec audio copy
             -copyinkf              #fixes the freezing issue
+            -loglevel error
             "$directory/$output_video"
         )
 
         ffmpeg "${ffmpeg_cutting_opts[@]}"
+        if [ $? -eq 0 ]; then
+            echo "Cutting of the video $output_video successful"
+        else
+            echo "Cutting of the video $output_video failed"
+        fi
         ((count++))
     done <"$input_timestamps"
 
@@ -106,10 +112,16 @@ start_script() {
         ffmpeg_converting_to_portrait_opts=(
             -i "$file"                                                                                                     #input file
             -vf "scale='min(1080,iw)':min'(1920,ih)':force_original_aspect_ratio=decrease,pad=1080:1920:-1:-1:color=black" #filtergraph
+            -loglevel error
             "$new_file"
         )
 
         ffmpeg "${ffmpeg_converting_to_portrait_opts[@]}"
+        if [ $? -eq 0 ]; then
+            echo "Succesfully created short video $new_file"
+        else
+            echo "An error occured while creating $new_file short video"
+        fi
     done
 }
 
