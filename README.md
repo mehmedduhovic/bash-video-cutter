@@ -31,6 +31,12 @@ Before using this script, ensure you have the following prerequisites installed:
 
 4. **Run the Script:**
 
+   To see the help please run:
+   ```bash
+   ./video-short-creator-cutter.sh -h
+   ```
+
+   An example of a command is found below:
    ```bash
    ./video-short-creator-cutter.sh -i input_video.mp4 -t timestamps_file.txt -o output_directory/
    ```
