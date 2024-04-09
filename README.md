@@ -67,6 +67,4 @@ Before using this script, ensure you have the following prerequisites installed:
 
 ## TODOs
 
-- Ability to enter your own format and extension of video shorts
-- Ability to change the exported names
-- Progress bar (hide ffmpeg report)
+- The blurred version should be fixed at 1080x1920

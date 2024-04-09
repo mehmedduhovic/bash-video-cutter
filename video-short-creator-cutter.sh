@@ -8,6 +8,7 @@ usage() {
     echo " -i   FILE Specify an input file"
     echo " -t   FILE Specify a timestamp file"
     echo " -o   FILE Specify an output file"
+    echo " -b   Specify blur"
 }
 
 start_script() {
@@ -37,6 +38,11 @@ start_script() {
             directory="$2"
             echo "using $2 as directory"
             shift
+            shift
+            ;;
+        -b)
+            blur="0"
+            echo "using blur"
             shift
             ;;
         esac
@@ -116,7 +122,19 @@ start_script() {
             "$new_file"
         )
 
-        ffmpeg "${ffmpeg_converting_to_portrait_opts[@]}"
+        ffmpeg_converting_to_portrait_opts_blurred=(
+            -i "$file" #input file
+            -lavfi "[0:v]scale=256/81*iw:256/81*ih,boxblur=luma_radius=min(h\,w)/40:luma_power=3:chroma_radius=min(cw\,ch)/40:chroma_power=1[bg];[bg][0:v]overlay=(W-w)/2:(H-h)/2,setsar=1,crop=w=iw*81/256"
+            -loglevel error
+            "$new_file"
+        )
+
+        if [ $blur -eq 0 ]; then
+            ffmpeg "${ffmpeg_converting_to_portrait_opts_blurred[@]}"
+        else
+            ffmpeg "${ffmpeg_converting_to_portrait_opts[@]}"
+        fi
+
         if [ $? -eq 0 ]; then
             echo "Succesfully created short video $new_file"
         else
