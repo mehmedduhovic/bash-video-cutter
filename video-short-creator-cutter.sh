@@ -81,9 +81,11 @@ start_script() {
         exit 0
     fi
 
+    max_jobs=3 # Maximum number of parallel ffmpeg processes
+    exec 3<"$input_timestamps"
     count=1
 
-    while IFS= read -r line; do
+    while IFS= read -r line <&3; do
         start_timestamp=$(echo "$line" | awk '{print $1}')
         end_timestamp=$(echo "$line" | awk '{print $2}')
         output_video="${count}.mp4"
@@ -100,15 +102,20 @@ start_script() {
             "$directory/$output_video"
         )
 
-        ffmpeg "${ffmpeg_cutting_opts[@]}"
+        ffmpeg "${ffmpeg_cutting_opts[@]}" &
         if [ $? -eq 0 ]; then
             echo "Cutting of the video $output_video successful"
         else
             echo "Cutting of the video $output_video failed"
         fi
         ((count++))
-    done <"$input_timestamps"
 
+        if ((count % max_jobs == 0)); then
+            wait # Wait for all background jobs to finish before continuing
+        fi
+    done <"$input_timestamps"
+    exec 3<&- # Close the file descriptor
+    wait      # Wait for the last batch of background jobs to complete
     cd "$directory" || exit
 
     for file in *.mp4; do
