@@ -9,6 +9,7 @@ usage() {
     echo " -t   FILE Specify a timestamp file"
     echo " -o   FILE Specify an output file"
     echo " -b   Specify blur"
+    echo " -p   Specify parallel (quite machine heavy!)"
 }
 
 start_script() {
@@ -43,6 +44,11 @@ start_script() {
         -b)
             blur="0"
             echo "using blur"
+            shift
+            ;;
+        -p)
+            parallel="0"
+            echo "using parallel cutting (KEEP IN MIND: USES A HEAVY MACHINE LOAD)"
             shift
             ;;
         esac
@@ -118,36 +124,52 @@ start_script() {
     wait      # Wait for the last batch of background jobs to complete
     cd "$directory" || exit
 
-    for file in *.mp4; do
-        file_name="${file%.*}"
-        new_file="${file_name}K.mp4"
+    if [ $parallel -eq 0 ]; then
+        convert_ffmpeg() {
+            input_file="$1"
+            filename="${input_file%.*}"
+            extension="${input_file##*.}"
+            new_file="${filename}K.${extension}"
+            echo "Parallel - Starting processing of $input_file..."
+            ffmpeg -i "$input_file" -lavfi "[0:v]scale=256/81*iw:256/81*ih,boxblur=luma_radius=min(h\,w)/40:luma_power=3:chroma_radius=min(cw\,ch)/40:chroma_power=1[bg];[bg][0:v]overlay=(W-w)/2:(H-h)/2,setsar=1,crop=w=iw*81/256" "$new_file" -loglevel panic
+            echo "Parallel - Finished processing $input_file into $new_file"
+        }
 
-        ffmpeg_converting_to_portrait_opts=(
-            -i "$file"                                                                                                     #input file
-            -vf "scale='min(1080,iw)':min'(1920,ih)':force_original_aspect_ratio=decrease,pad=1080:1920:-1:-1:color=black" #filtergraph
-            -loglevel error
-            "$new_file"
-        )
+        export -f convert_ffmpeg
+        find . -type f -iname "*.mp4" -print0 | parallel -0 -j 3 convert_ffmpeg
+    else
+        for file in *.mp4; do
+            file_name="${file%.*}"
+            new_file="${file_name}K.mp4"
 
-        ffmpeg_converting_to_portrait_opts_blurred=(
-            -i "$file" #input file
-            -lavfi "[0:v]scale=256/81*iw:256/81*ih,boxblur=luma_radius=min(h\,w)/40:luma_power=3:chroma_radius=min(cw\,ch)/40:chroma_power=1[bg];[bg][0:v]overlay=(W-w)/2:(H-h)/2,setsar=1,crop=w=iw*81/256"
-            -loglevel error
-            "$new_file"
-        )
+            ffmpeg_converting_to_portrait_opts=(
+                -i "$file"                                                                                                     #input file
+                -vf "scale='min(1080,iw)':min'(1920,ih)':force_original_aspect_ratio=decrease,pad=1080:1920:-1:-1:color=black" #filtergraph
+                -loglevel error
+                "$new_file"
+            )
 
-        if [ $blur -eq 0 ]; then
-            ffmpeg "${ffmpeg_converting_to_portrait_opts_blurred[@]}"
-        else
-            ffmpeg "${ffmpeg_converting_to_portrait_opts[@]}"
-        fi
+            ffmpeg_converting_to_portrait_opts_blurred=(
+                -i "$file" #input file
+                -lavfi "[0:v]scale=256/81*iw:256/81*ih,boxblur=luma_radius=min(h\,w)/40:luma_power=3:chroma_radius=min(cw\,ch)/40:chroma_power=1[bg];[bg][0:v]overlay=(W-w)/2:(H-h)/2,setsar=1,crop=w=iw*81/256"
+                -loglevel error
+                "$new_file"
+            )
 
-        if [ $? -eq 0 ]; then
-            echo "Succesfully created short video $new_file"
-        else
-            echo "An error occured while creating $new_file short video"
-        fi
-    done
+            if [ $blur -eq 0 ]; then
+                ffmpeg "${ffmpeg_converting_to_portrait_opts_blurred[@]}"
+            else
+                ffmpeg "${ffmpeg_converting_to_portrait_opts[@]}"
+            fi
+
+            if [ $? -eq 0 ]; then
+                echo "Succesfully created short video $new_file"
+            else
+                echo "An error occured while creating $new_file short video"
+            fi
+        done
+    fi
+
 }
 
 start_script "$@"
